@@ -151,6 +151,13 @@ if st.button("🚀 开始计算", type="primary", use_container_width=True):
             df_fse = pd.read_excel(fse_file)
             df_mapping = pd.read_excel(mapping_file)
             
+            # 修复日期解析：将Excel日期数字转换为标准日期
+            # Excel使用1899-12-30作为基准日期，天数从1开始
+            if pd.api.types.is_numeric_dtype(df_fse['Leads Created On']):
+                df_fse['Leads Created On'] = pd.to_datetime('1899-12-30') + pd.to_timedelta(df_fse['Leads Created On'], unit='D')
+            else:
+                df_fse['Leads Created On'] = pd.to_datetime(df_fse['Leads Created On'], errors='coerce')
+            
             status_text.text("✅ 数据读取成功！")
             status_text.text(f"   FSE原始数据: {len(df_fse)} 条记录")
             status_text.text(f"   员工mapping: {len(df_mapping)} 条记录")
@@ -161,7 +168,7 @@ if st.button("🚀 开始计算", type="primary", use_container_width=True):
             status_text.text("🔍 步骤 2/7: 正在进行员工名提取与匹配...")
             progress_bar.progress(20)
             
-            # 定义提取员工名的函数
+            # 定义提取员工名的函数（修复正则表达式，匹配实际格式）
             def extract_employee_name(note):
                 if pd.isna(note):
                     return None
@@ -177,12 +184,12 @@ if st.button("🚀 开始计算", type="primary", use_container_width=True):
                     if not matching_row.empty:
                         return matching_row.iloc[0]['NameEN']
                 
-                # 尝试工号+姓名格式: CN90AF27 - Caifeng yang
-                name_match = re.search(r'[A-Z]{2}\d{5}[A-Z]{0,2}\s*-\s*([A-Za-z\s\.]+)', note_str)
+                # 修复：尝试工号+姓名格式: CN90AF27 - Caifeng yang（注意格式：工号空格-空格姓名）
+                name_match = re.search(r'[A-Z]{2}\d{5}[A-Z]{0,2}\s*-\s*([A-Za-z\s]+)', note_str)
                 if name_match:
                     name = name_match.group(1).strip()
-                    # 标准化姓名格式
-                    name = name.title()
+                    # 标准化姓名格式（首字母大写）
+                    name = ' '.join([word.capitalize() for word in name.split()])
                     return name
                 
                 return None
@@ -359,14 +366,11 @@ if st.button("🚀 开始计算", type="primary", use_container_width=True):
             df_planner = df_fse[df_fse['JobTitle'].isin(planner_titles)].copy()
             
             if len(df_planner) > 0:
-                # 确保日期列是datetime类型
-                df_planner['Leads Created On'] = pd.to_datetime(df_planner['Leads Created On'], errors='coerce')
-                
-                # 提取月份
+                # 提取月份（日期已在Step 1中修复为正确格式）
                 df_planner['月份'] = df_planner['Leads Created On'].dt.to_period('M').astype(str)
                 
-                # 计算提交个数
-                planner_submit = df_planner.groupby(['八大区', '29小区', 'JobTitle', '员工名', '月份']).size().reset_index(name='提交个数')
+                # 灵活分组：只按JobTitle、员工名、月份分组（避免区域空值问题）
+                planner_submit = df_planner.groupby(['JobTitle', '员工名', '月份']).size().reset_index(name='提交个数')
                 
                 # 计算转化个数（与工程师相同的规则）
                 df_planner_converted = df_planner[
@@ -374,16 +378,22 @@ if st.button("🚀 开始计算", type="primary", use_container_width=True):
                     (df_planner['商机类型'].isin(target_opportunities))
                 ]
                 
-                planner_convert = df_planner_converted.groupby(['八大区', '29小区', 'JobTitle', '员工名', '月份']).size().reset_index(name='转化个数')
+                if len(df_planner_converted) > 0:
+                    planner_convert = df_planner_converted.groupby(['JobTitle', '员工名', '月份']).size().reset_index(name='转化个数')
+                    planner_submit = pd.merge(planner_submit, planner_convert, on=['JobTitle', '员工名', '月份'], how='left')
+                else:
+                    planner_submit['转化个数'] = 0
                 
-                # 合并数据
-                df_planner_bonus = pd.merge(planner_submit, planner_convert, on=['八大区', '29小区', 'JobTitle', '员工名', '月份'], how='left')
-                df_planner_bonus['转化个数'] = df_planner_bonus['转化个数'].fillna(0)
+                planner_submit['转化个数'] = planner_submit['转化个数'].fillna(0)
                 
                 # 计算当月奖金
-                df_planner_bonus['当月奖金'] = df_planner_bonus['提交个数'] * 20 + df_planner_bonus['转化个数'] * 100
+                planner_submit['当月奖金'] = planner_submit['提交个数'] * 20 + planner_submit['转化个数'] * 100
                 
-                # 按原始列顺序排列
+                # 从原始数据中获取区域信息（保留空值）
+                area_info = df_planner[['员工名', '八大区', '29小区']].drop_duplicates()
+                df_planner_bonus = planner_submit.merge(area_info, on='员工名', how='left')
+                
+                # 重排列顺序
                 df_planner_bonus = df_planner_bonus[['八大区', '29小区', 'JobTitle', '员工名', '月份', '提交个数', '转化个数', '当月奖金']]
                 
                 planner_count = df_planner_bonus['员工名'].nunique()
@@ -722,3 +732,4 @@ st.markdown("""
 
 st.markdown("---")
 st.markdown("<center><small>FSE奖金计算系统 v2.0 | 基于需求文档生成 | 2026</small></center>", unsafe_allow_html=True)
+

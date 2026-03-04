@@ -271,10 +271,7 @@ if st.button("🚀 开始计算", type="primary", use_container_width=True):
             df_engineer = df_fse[df_fse['JobTitle'].isin(engineer_titles)].copy()
             
             if len(df_engineer) > 0:
-                # 确保日期列是datetime类型
-                df_engineer['Leads Created On'] = pd.to_datetime(df_engineer['Leads Created On'], errors='coerce')
-                
-                # 提取月份
+                # 提取月份（日期已在Step 1中修复为正确格式）
                 df_engineer['月份'] = df_engineer['Leads Created On'].dt.to_period('M').astype(str)
                 
                 # 计算提交个数
@@ -528,15 +525,15 @@ if st.button("🚀 开始计算", type="primary", use_container_width=True):
                     st.dataframe(df_engineer_bonus, use_container_width=True, height=400)
                     st.info(f"共 {len(df_engineer_bonus)} 条记录")
                     
-                    # 下载按钮
-                    excel_buffer = BytesIO()
-                    with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+                    # 下载按钮（使用独立的buffer）
+                    engineer_buffer = BytesIO()
+                    with pd.ExcelWriter(engineer_buffer, engine='openpyxl') as writer:
                         df_engineer_bonus.to_excel(writer, index=False, sheet_name='工程师奖金')
-                    excel_buffer.seek(0)
+                    engineer_buffer.seek(0)
                     
                     st.download_button(
                         label="📥 下载工程师奖金表",
-                        data=excel_buffer.getvalue(),
+                        data=engineer_buffer.getvalue(),
                         file_name="工程师奖金表.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         use_container_width=True
@@ -550,15 +547,15 @@ if st.button("🚀 开始计算", type="primary", use_container_width=True):
                     st.dataframe(df_planner_bonus, use_container_width=True, height=400)
                     st.info(f"共 {len(df_planner_bonus)} 条记录")
                     
-                    # 下载按钮
-                    excel_buffer = BytesIO()
-                    with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+                    # 下载按钮（使用独立的buffer）
+                    planner_buffer = BytesIO()
+                    with pd.ExcelWriter(planner_buffer, engine='openpyxl') as writer:
                         df_planner_bonus.to_excel(writer, index=False, sheet_name='派工员奖金')
-                    excel_buffer.seek(0)
+                    planner_buffer.seek(0)
                     
                     st.download_button(
                         label="📥 下载派工员奖金表",
-                        data=excel_buffer.getvalue(),
+                        data=planner_buffer.getvalue(),
                         file_name="派工员奖金表.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         use_container_width=True
@@ -572,15 +569,15 @@ if st.button("🚀 开始计算", type="primary", use_container_width=True):
                     st.dataframe(df_area_rank, use_container_width=True, height=400)
                     st.info(f"共 {len(df_area_rank)} 个小区")
                     
-                    # 下载按钮
-                    excel_buffer = BytesIO()
-                    with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+                    # 下载按钮（使用独立的buffer）
+                    area_buffer = BytesIO()
+                    with pd.ExcelWriter(area_buffer, engine='openpyxl') as writer:
                         df_area_rank.to_excel(writer, index=False, sheet_name='区域排名')
-                    excel_buffer.seek(0)
+                    area_buffer.seek(0)
                     
                     st.download_button(
                         label="📥 下载区域排名奖金表",
-                        data=excel_buffer.getvalue(),
+                        data=area_buffer.getvalue(),
                         file_name="区域排名奖金.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         use_container_width=True
@@ -594,15 +591,15 @@ if st.button("🚀 开始计算", type="primary", use_container_width=True):
                     st.dataframe(df_pipeline_bonus, use_container_width=True, height=400)
                     st.info(f"共 {len(df_pipeline_bonus)} 条记录")
                     
-                    # 下载按钮
-                    excel_buffer = BytesIO()
-                    with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+                    # 下载按钮（使用独立的buffer）
+                    pipeline_buffer = BytesIO()
+                    with pd.ExcelWriter(pipeline_buffer, engine='openpyxl') as writer:
                         df_pipeline_bonus.to_excel(writer, index=False, sheet_name='后处理奖金')
-                    excel_buffer.seek(0)
+                    pipeline_buffer.seek(0)
                     
                     st.download_button(
                         label="📥 下载后处理奖金表",
-                        data=excel_buffer.getvalue(),
+                        data=pipeline_buffer.getvalue(),
                         file_name="后处理奖金.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         use_container_width=True
@@ -620,15 +617,15 @@ if st.button("🚀 开始计算", type="primary", use_container_width=True):
                     st.dataframe(df_fse[display_columns].head(100), use_container_width=True, height=400)
                     st.info(f"共显示前100条记录，总计 {len(df_fse)} 条记录")
                     
-                    # 下载按钮
-                    excel_buffer = BytesIO()
-                    with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+                    # 下载按钮（使用独立的buffer）
+                    raw_buffer = BytesIO()
+                    with pd.ExcelWriter(raw_buffer, engine='openpyxl') as writer:
                         df_fse.to_excel(writer, index=False, sheet_name='原始数据')
-                    excel_buffer.seek(0)
+                    raw_buffer.seek(0)
                     
                     st.download_button(
                         label="📥 下载完整原始数据",
-                        data=excel_buffer.getvalue(),
+                        data=raw_buffer.getvalue(),
                         file_name="FSE原始数据表_处理后.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         use_container_width=True
@@ -732,4 +729,3 @@ st.markdown("""
 
 st.markdown("---")
 st.markdown("<center><small>FSE奖金计算系统 v2.0 | 基于需求文档生成 | 2026</small></center>", unsafe_allow_html=True)
-

@@ -184,8 +184,10 @@ if st.button("🚀 开始计算", type="primary", use_container_width=True):
                     if not matching_row.empty:
                         return matching_row.iloc[0]['NameEN']
                 
-                # 修复：尝试工号+姓名格式: CN90AF27 - Caifeng yang（注意格式：工号空格-空格姓名）
-                name_match = re.search(r'[A-Z]{2}\d{5}[A-Z]{0,2}\s*-\s*([A-Za-z\s]+)', note_str)
+                # 修复：尝试工号+姓名格式（工号包含字母和数字混合）
+                # 实际格式如：CN90AF27, CN90A325, CN90AE03 等
+                # 模式说明：CN + 数字 + 可能的字母/数字 + 可能的字母/数字 + "-" + 姓名
+                name_match = re.search(r'[A-Z]{2}\d+[A-Z0-9]{0,2}\s*-\s*([A-Za-z\s]+)', note_str)
                 if name_match:
                     name = name_match.group(1).strip()
                     # 标准化姓名格式（首字母大写）
